@@ -1,22 +1,48 @@
 import './App.css';
 import { countries } from './data/countries';
 import axios from 'axios';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MarketChart from './components/MarketChart';
+
+// Initialize Google Analytics
+const trackEvent = (eventName, eventParams = {}) => {
+  if (window.gtag) {
+    window.gtag('event', eventName, eventParams);
+  }
+};
 
 function App() {
   const [chartData, setChartData] = useState(null);
   const [category, setCategory] = useState('');
   const [dataSource, setDataSource] = useState('');
 
+  // Track page view on component mount
+  useEffect(() => {
+    trackEvent('page_view', {
+      page_title: 'Market Analysis Dashboard',
+      page_location: window.location.href,
+      page_path: window.location.pathname
+    });
+  }, []);
+
   const handleSubmit = async () => {
     const productDescription = document.getElementById('productDescription').value;
     const targetMarket = document.getElementById('targetMarket').value;
+
+    // Track form submission attempt
+    trackEvent('form_submission', {
+      product_description_length: productDescription.length,
+      target_market: targetMarket
+    });
 
     console.log('Form values:', JSON.stringify({ productDescription, targetMarket }, null, 2));
 
     if (!productDescription.trim() || !targetMarket) {
       console.log('Validation failed: Empty fields detected');
+      // Track validation failure
+      trackEvent('form_validation_failed', {
+        reason: !productDescription.trim() ? 'empty_description' : 'no_market_selected'
+      });
       alert('Please fill in both Product Description and Target Market fields.');
       return;
     }
@@ -52,11 +78,23 @@ function App() {
       const category = parsedData.category || 'Market Analysis';
       const dataSource = parsedData.datasource || 'Market Research Data';
 
+      // Track successful data fetch
+      trackEvent('data_fetch_success', {
+        category: category,
+        data_source: dataSource,
+        data_points: Object.keys(data).length
+      });
+
       setChartData(data);
       setCategory(category);
       setDataSource(dataSource);
     } catch (error) {
       console.error('Error details:', JSON.stringify(error, null, 2));
+      // Track error
+      trackEvent('data_fetch_error', {
+        error_message: error.message,
+        error_code: error.code
+      });
       alert('Error fetching data. Please try again later.');
     }
   };
@@ -77,6 +115,14 @@ function App() {
               resize: 'vertical',
               fontFamily: 'inherit'
             }}
+            onChange={(e) => {
+              // Track input changes
+              if (e.target.value.length > 0) {
+                trackEvent('product_description_input', {
+                  input_length: e.target.value.length
+                });
+              }
+            }}
           />
           <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <label htmlFor="targetMarket" style={{ marginBottom: '10px' }}>Target Market:</label>
@@ -89,6 +135,14 @@ function App() {
                 fontSize: '16px',
                 backgroundColor: 'white',
                 color: 'black'
+              }}
+              onChange={(e) => {
+                // Track market selection
+                if (e.target.value) {
+                  trackEvent('market_selection', {
+                    selected_market: e.target.value
+                  });
+                }
               }}
             >
               <option value="">Select a country</option>
